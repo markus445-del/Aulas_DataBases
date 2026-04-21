@@ -1,89 +1,142 @@
-# 🚀 MongoDB com Docker Compose
+# MongoDB com Docker Compose
 
-Este projeto configura o MongoDB usando Docker Compose, com armazenamento persistente via volumes Docker.
+Este material mostra como subir o MongoDB com Docker Compose, acessar o banco pelo `mongosh` e importar os dados do arquivo `Unifaat_aula.json`.
 
----
+## O que está incluído
 
-## 📦 O que está incluído
+- MongoDB em container Docker
+- Volume persistente para os dados
+- Usuário root configurado com:
+  - usuário: `admin`
+  - senha: `admin123`
+- Arquivo de dados para importação: `Unifaat_aula.json`
 
-- MongoDB (última versão estável)
-- Volume persistente para os dados: `/data/db`
-- Usuário root `admin123` criado
-- Acesso via `mongosh` e outras ferramentas de banco de dados
+## Como subir o ambiente
 
----
+No diretório `Helps/MongoDB`, execute:
 
-## 🧑‍💻 Como usar
-
-### 1. Crie o arquivo `docker-compose.yml` na pasta `MongoDB` com o seguinte conteúdo:
-
-```yaml
-version: '3.8'
-
-services:
-  mongo:
-    image: mongo:latest
-    container_name: mongo_db
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin123
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-    volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
-```
-
-### 2. Suba o container
-
-No diretório `MongoDB`, execute:
 ```bash
 docker-compose up -d
 ```
 
-### 3. Conecte-se ao MongoDB
-
-Você pode conectar-se via ferramentas como MongoDB Compass ou `mongosh` usando a seguinte string de conexão:
-
-```
-mongodb://admin123:admin123@localhost:27017/
-```
-
-Ao conectar, você pode usar qualquer nome de banco de dados, por exemplo `auladb`, e ele será criado automaticamente no primeiro uso.
-
----
-
-## ⚙️ Comandos úteis
+Para verificar se o container está rodando:
 
 ```bash
-docker-compose up -d       # Inicia o container em segundo plano
-docker-compose down        # Encerra e remove o container
-docker-compose down -v     # Encerra, remove o container e os volumes (reseta o banco)
-docker-compose logs -f     # Acompanha os logs em tempo real
-docker-compose restart     # Reinicia o serviço
+docker-compose ps
+docker-compose logs -f
 ```
 
----
+Para parar o ambiente:
 
-## 🧪 Teste rápido com `mongosh`
+```bash
+docker-compose down
+```
 
-Após conectar-se ao servidor:
+Para parar e remover também o volume de dados:
+
+```bash
+docker-compose down -v
+```
+
+## Como acessar o MongoDB
+
+Você pode se conectar com o `mongosh` por dentro do container:
+
+```bash
+docker exec -it mongo_db mongosh -u admin123 -p admin123 --authenticationDatabase admin
+```
+
+Ou usando a string de conexão:
+
+```bash
+mongodb://admin123:admin123@localhost:27017/?authSource=admin
+```
+
+## Comandos principais no MongoDB
+
+Depois de entrar no `mongosh`, os comandos mais usados são:
 
 ```javascript
-use auladb; // Seleciona ou cria o banco de dados
-db.test.insertOne({ message: "MongoDB está funcionando!" });
-db.test.find();
+show dbs
+use auladb
+show collections
+
+db.pessoas.find()
+db.pessoas.find().pretty()
+db.pessoas.findOne()
+
+db.pessoas.insertOne({
+  nome: "Carlos",
+  idade: 30,
+  cidade: "Campinas",
+  profissao: "Desenvolvedor"
+})
+
+db.pessoas.insertMany([
+  { nome: "Maria", idade: 25, cidade: "São Paulo", profissao: "Designer" },
+  { nome: "João", idade: 32, cidade: "Jundiaí", profissao: "Analista" }
+])
+
+db.pessoas.updateOne(
+  { nome: "Carlos" },
+  { $set: { cidade: "Atibaia" } }
+)
+
+db.pessoas.deleteOne({ nome: "Carlos" })
+db.pessoas.countDocuments()
+db.pessoas.drop()
 ```
 
----
+## Importando o arquivo `Unifaat_aula.json`
 
-## ✅ Requisitos
+Para importar o arquivo `.json` para a coleção `pessoas` do banco `auladb`, execute:
+
+```bash
+docker exec -it mongo-test mongoimport \
+  -u admin \
+  -p admin123 \
+  --authenticationDatabase admin \
+  --db auladb \
+  --collection pessoas \
+  --file /tmp/Unifaat_aula.json \
+  --jsonArray
+```
+
+Como o comando acima lê o arquivo de dentro do container, copie o arquivo antes:
+
+```bash
+docker cp Unifaat_aula.json mongo_db:/tmp/Unifaat_aula.json
+```
+
+Fluxo completo:
+
+```bash
+docker-compose up -d
+docker cp Unifaat_aula.json mongo_db:/tmp/Unifaat_aula.json
+docker exec -it mongo_db mongoimport \
+  -u admin123 \
+  -p admin123 \
+  --authenticationDatabase admin \
+  --db auladb \
+  --collection pessoas \
+  --file /tmp/Unifaat_aula.json \
+  --jsonArray
+```
+
+## Conferindo os dados importados
+
+Entre no `mongosh` e rode:
+
+```javascript
+use auladb
+show collections
+db.pessoas.find().pretty()
+db.pessoas.countDocuments()
+```
+
+## Requisitos
 
 - Docker
 - Docker Compose
 
----
-
-🛠 Desenvolvido para fins educacionais e experimentação local.
+Material preparado para uso local em aula e testes.

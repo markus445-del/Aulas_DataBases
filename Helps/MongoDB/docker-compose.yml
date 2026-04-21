@@ -1,14 +1,18 @@
-version: '3.8'
-
 services:
   mongo:
-    image: mongo:6.0
+    image: mongo:latest
     container_name: mongo-test
+    restart: unless-stopped
     ports:
       - "27017:27017"
-    volumes:
-      - ./init:/docker-entrypoint-initdb.d:ro
     environment:
-      MONGO_INITDB_DATABASE: testdb
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: testdb
+    volumes:
+      - mongo_data:/data/db
+      - ./init-data.js:/docker-entrypoint-initdb.d/init-data.js:ro
+      - ./Unifaat_aula.json:/tmp/Unifaat_aula.json:ro
+
+volumes:
+  mongo_data:
